@@ -724,7 +724,7 @@ func TestSnapshotSparseRestore(t *testing.T) {
 		snapID := si[0].Snapshots[0].SnapshotID
 		restoreFile := filepath.Join(restoreDir, c.name+"_restore")
 
-		e.RunAndExpectSuccess(t, "snapshot", "restore", snapID, "--mode=sparse", restoreFile)
+		e.RunAndExpectSuccess(t, "snapshot", "restore", snapID, "--sparse", restoreFile)
 		verifyFileSize(t, restoreFile, c.rLog, c.rPhys)
 	}
 }
@@ -739,17 +739,22 @@ func verifyFileSize(t *testing.T, fname string, logical, physical uint64) {
 
 	realLogical := uint64(st.Size())
 
+	if realLogical != logical {
+		t.Errorf("%s logical file size incorrect: expected %d, got %d", fname, logical, realLogical)
+	}
+
+	if runtime.GOOS == windowsOSName {
+		t.Logf("getting physical file size is not supported on windows")
+		return
+	}
+
 	realPhysical, err := stat.GetFileAllocSize(fname)
 	if err != nil {
 		t.Fatalf("error verifying file size: %v", err)
 	}
 
-	if realLogical != logical {
-		t.Fatalf("%s logical file size incorrect: expected %d, got %d", fname, logical, realLogical)
-	}
-
 	if realPhysical != physical {
-		t.Fatalf("%s physical file size incorrect: expected %d, got %d", fname, physical, realPhysical)
+		t.Errorf("%s physical file size incorrect: expected %d, got %d", fname, physical, realPhysical)
 	}
 }
 
